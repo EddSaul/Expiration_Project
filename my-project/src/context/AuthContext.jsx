@@ -1,92 +1,130 @@
-import { createContext, useEffect, useContext, useState } from 'react';
+import { createContext, useEffect, useContext, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext();
 
 export const AuthContextProvider = ({ children }) => { 
-    const [session, setSession] = useState(undefined);
+    const [session, setSession] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // Create User
-    const CreateUser = async (email, password) => {
+    const createUser = async (email, password) => {
+        setLoading(true);
+        setError(null);
+    
         try {
-            const { data, error } = await supabase.auth.signUp({
+            const { data, error: supabaseError } = await supabase.auth.signUp({
                 email: email.toLowerCase(),
                 password: password,
             });
-
-            // Handle Supabase error explicitly
-            if (error) {
-                console.error("Sign-up error:", error.message); // Log the error for debugging
-                return { success: false, error: error.message }; // Return the error
+    
+            if (supabaseError) {
+                console.error('Supabase error:', supabaseError);
+                throw supabaseError;
             }
-
-            // If no error, return success
-            console.log("Sign-up success:", data);
-            return { success: true, data }; // Return the user data
+    
+            console.log('User created:', data);
+            return { success: true, data };
         } catch (error) {
-            // Handle unexpected issues
-            console.error("Unexpected error during sign-up:", err.message);
-            return {
-                success: false,
-                error: "An unexpected error occurred. Please try again.",
-            };
+            console.error('Signup failed:', error);
+            setError(error.message);
+            return { success: false, error };
+        } finally {
+            setLoading(false);
         }
     };
 
     // Sign in
     const LoginUser = async (email, password) => {
-    try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
-        password: password,
-        });
+        setLoading(true);
+        setError(null);
+        try {
+            const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
+                email: email.toLowerCase(),
+                password: password,
+            });
 
-        // Handle Supabase error explicitly
-        if (error) {
-        console.error("Sign-in error:", error.message); // Log the error for debugging
-        return { success: false, error: error.message }; // Return the error
+            if (supabaseError) {
+                throw supabaseError;
+            }
+
+            return { success: true, data };
+        } catch (error) {
+            setError(error.message);
+            return { success: false, error: error.message };
+        } finally {
+            setLoading(false);
         }
-
-        // If no error, return success
-        console.log("Sign-in success:", data);
-        return { success: true, data }; // Return the user data
-    } catch (error) {
-        // Handle unexpected issues
-        console.error("Unexpected error during sign-in:", err.message);
-        return {
-        success: false,
-        error: "An unexpected error occurred. Please try again.",
-        };
-    }
     };
 
-    useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-    });
+    // Sign out
+    const signOut = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const { error: supabaseError } = await supabase.auth.signOut();
+            if (supabaseError) {
+                throw supabaseError;
+            }
+            setSession(null);
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session);
-    });
+    // Fetch session
+    const fetchSession = useCallback(async () => {
+        setLoading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            setSession(session);
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
+    useEffect(() => {
+        fetchSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+
+        return () => subscription?.unsubscribe();
+    }, [fetchSession]);
 
     return (
         <AuthContext.Provider value={{ 
             LoginUser, 
-            signOut: () => supabase.auth.signOut(),  
-            session 
-            }}
-        >
+            createUser,
+            signOut,  
+            session,
+            loading,
+            error,
+            setError
+        }}>
             {children}
         </AuthContext.Provider>
-    )
+    );
+};
 
-}
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthContextProvider');
+    }
+    return context;
+};
 
-
-export const UserAuth = () => { 
-    return useContext(AuthContext);
-}
-
-export const useAuth = () => useContext(AuthContext);
+export const UserAuth = () => {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthContextProvider');
+    }
+    return context;
+};

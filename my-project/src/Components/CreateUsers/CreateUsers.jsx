@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
@@ -6,53 +8,87 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { Dropdown } from 'primereact/dropdown';
-import './CreateUsers.css'; // Import your CSS file
+import './CreateUsers.css';
 
 const CreateUsers = () => {
-  // Role options
+  const { session } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [displayDialog, setDisplayDialog] = useState(false);
+  const [user, setUser] = useState({ 
+    email: '', 
+    password: '', 
+    username: '',
+    role: 'staff'
+  });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
   const roles = [
     { label: 'Admin', value: 'admin' },
     { label: 'Manager', value: 'manager' },
     { label: 'Staff', value: 'staff' }
   ];
 
-  // Mock data with roles
-  const initialUsers = [
-    { id: 1, username: 'admin', email: 'admin@example.com', role: 'admin' },
-    { id: 2, username: 'manager', email: 'manager@store.com', role: 'manager' },
-    { id: 3, username: 'staff', email: 'staff@store.com', role: 'staff' }
-  ];
+  const validateForm = () => {
+    const newErrors = {};
+    if (!user.email) newErrors.email = 'Email is required';
+    if (!user.password) newErrors.password = 'Password is required';
+    if (user.password.length < 1)
+      newErrors.password = 'Password must be at least 1 character';
+    if (!user.username) newErrors.username = 'Username is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-  const [users, setUsers] = useState(initialUsers);
-  const [displayDialog, setDisplayDialog] = useState(false);
-  const [user, setUser] = useState({ 
-    username: '', 
-    email: '', 
-    password: '', 
-    role: 'staff' // Default role
-  });
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const saveUser = () => {
-    if (user.id) {
-      // Edit existing
-      setUsers(users.map(u => u.id === user.id ? user : u));
-    } else {
-      // Add new
-      setUsers([...users, { ...user, id: users.length + 1 }]);
+      if (error) throw error;
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
     }
-    setDisplayDialog(false);
   };
 
-  const editUser = (user) => {
-    setUser({ ...user, password: '' });
-    setDisplayDialog(true);
+  const addUser = async () => {
+    if (!validateForm()) return;
+    setLoading(true);
+
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: user.email,
+        password: user.password,
+      });
+      if (authError) throw authError;
+
+      const { error: profileError } = await supabase.from('users').insert([
+        {
+          id: authData.user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      ]);
+      if (profileError) throw profileError;
+
+      alert('User created successfully');
+      setUser({ email: '', password: '', username: '', role: 'staff' });
+      setDisplayDialog(false);
+      await fetchUsers();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteUser = (id) => {
-    setUsers(users.filter(u => u.id !== id));
-  };
-
-  // Role badge template
   const roleBodyTemplate = (rowData) => {
     const severity = {
       'admin': 'danger',
@@ -67,6 +103,10 @@ const CreateUsers = () => {
     );
   };
 
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
   return (
     <div className="users-container">
       <div className="users-header">
@@ -75,13 +115,20 @@ const CreateUsers = () => {
           label="Add User" 
           icon="pi pi-plus" 
           onClick={() => {
-            setUser({ username: '', email: '', password: '', role: 'staff' });
+            setUser({ email: '', password: '', username: '', role: 'staff' });
             setDisplayDialog(true);
           }}
+          loading={loading}
         />
       </div>
 
-      <DataTable value={users} paginator rows={5} className="p-datatable-sm">
+      <DataTable 
+        value={users} 
+        paginator 
+        rows={10}
+        loading={loading}
+        className="users-table"
+      >
         <Column field="username" header="Username" sortable />
         <Column field="email" header="Email" sortable />
         <Column 
@@ -91,50 +138,56 @@ const CreateUsers = () => {
           sortable 
         />
         <Column 
-          header="Actions" 
-          body={(rowData) => (
-            <div className="flex gap-2">
-              <Button 
-                icon="pi pi-pencil" 
-                className="p-button-rounded p-button-success p-button-sm" 
-                onClick={() => editUser(rowData)} 
-              />
-              <Button 
-                icon="pi pi-trash" 
-                className="p-button-rounded p-button-danger p-button-sm" 
-                onClick={() => deleteUser(rowData.id)} 
-              />
-            </div>
-          )}
+          field="created_at" 
+          header="Created" 
+          body={(rowData) => new Date(rowData.created_at).toLocaleDateString()}
+          sortable
         />
       </DataTable>
 
       <Dialog 
         visible={displayDialog} 
-        onHide={() => setDisplayDialog(false)}
-        header={user.id ? "Edit User" : "Add User"}
-        style={{ width: '30vw' }}
+        onHide={() => !loading && setDisplayDialog(false)}
+        header="Add New User"
+        className="user-dialog"
+        dismissableMask={!loading}
+        closable={!loading}
       >
-        <div className="p-fluid">
-          <div className="field">
+        <div className="p-fluid user-form">
+          <div className="p-field">
+            <label htmlFor="email">Email*</label>
+            <InputText 
+              id="email" 
+              type="email"
+              value={user.email} 
+              onChange={(e) => setUser({ ...user, email: e.target.value })} 
+              className={errors.email ? 'p-invalid' : ''}
+            />
+            {errors.email && <small className="p-error">{errors.email}</small>}
+          </div>
+          <div className="p-field">
             <label htmlFor="username">Username*</label>
             <InputText 
               id="username" 
               value={user.username} 
               onChange={(e) => setUser({ ...user, username: e.target.value })} 
-              required
+              className={errors.username ? 'p-invalid' : ''}
             />
+            {errors.username && <small className="p-error">{errors.username}</small>}
           </div>
-          <div className="field mt-3">
-            <label htmlFor="email">Email*</label>
-            <InputText 
-              id="email" 
-              value={user.email} 
-              onChange={(e) => setUser({ ...user, email: e.target.value })} 
-              required
+          <div className="p-field">
+            <label htmlFor="password">Password*</label>
+            <Password 
+              id="password" 
+              value={user.password} 
+              onChange={(e) => setUser({ ...user, password: e.target.value })} 
+              toggleMask 
+              feedback={false}
+              className={errors.password ? 'p-invalid' : ''}
             />
+            {errors.password && <small className="p-error">{errors.password}</small>}
           </div>
-          <div className="field mt-3">
+          <div className="p-field">
             <label htmlFor="role">Role*</label>
             <Dropdown
               id="role"
@@ -144,29 +197,18 @@ const CreateUsers = () => {
               placeholder="Select Role"
             />
           </div>
-          <div className="field mt-3">
-            <label htmlFor="password">
-              {user.id ? "New Password (leave blank to keep)" : "Password*"}
-            </label>
-            <Password 
-              id="password" 
-              value={user.password} 
-              onChange={(e) => setUser({ ...user, password: e.target.value })} 
-              toggleMask 
-              feedback={false}
-              required={!user.id}
-            />
-          </div>
         </div>
-        <div className="flex justify-content-end gap-2 mt-4">
+        <div className="dialog-footer">
           <Button 
             label="Cancel" 
             className="p-button-text" 
             onClick={() => setDisplayDialog(false)} 
+            disabled={loading}
           />
           <Button 
             label="Save" 
-            onClick={saveUser} 
+            onClick={addUser} 
+            loading={loading}
           />
         </div>
       </Dialog>
