@@ -5,7 +5,6 @@ import Dashboard from './Components/Dashboard/Dashboard';
 import CreateUsers from './Components/CreateUsers/CreateUsers';
 import Categories from './Components/Categories/Categories';
 import Brands from './Components/Brands/Brands';
-import Trycreate from './Components/CreateUsers/Trycreate';
 import ProtectedLayout from './ProtectedLayouts';
 import { AuthLayout, PublicLayout } from './layouts';
 
@@ -26,7 +25,6 @@ export const router = createBrowserRouter([
           { path: '/createusers', element: <CreateUsers /> },
           { path: '/categories', element: <Categories /> },
           { path: '/brands', element: <Brands /> },
-          { path: '/trycreate', element: <Trycreate /> }
         ]
       }
     ]
