@@ -77,6 +77,36 @@
     padding: 2rem;
 }
 
+.offer-program-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+  
+.offer-program-text {
+    font-size: 0.875rem;
+}
+
+.text-green-500 {
+    color: #22c55e;
+}
+
+.text-red-500 {
+    color: #ef4444;
+}
+
+.brand-dialog .p-dialog-content {
+    padding: 1.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
     .brands-container {

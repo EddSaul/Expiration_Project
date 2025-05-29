@@ -55,7 +55,7 @@ const ProductExpiryTracker = () => {
     setLoading(true);
     try {
       let query = supabase
-        .from('products')
+        .from('users_products')
         .select('*')
         .order('expiry_date', { ascending: true });
 
@@ -110,7 +110,7 @@ const ProductExpiryTracker = () => {
       };
 
       const { data, error } = await supabase
-        .from('products')
+        .from('users_products')
         .insert([productToAdd])
         .select();
 
@@ -131,7 +131,7 @@ const ProductExpiryTracker = () => {
   const toggleTaken_out = async (rowData) => {
     try {
       const { error } = await supabase
-        .from('products')
+        .from('users_products')
         .update({ taken_out: !rowData.taken_out })
         .eq('id', rowData.id);
 
@@ -166,7 +166,7 @@ const ProductExpiryTracker = () => {
     
     try {
       const { error } = await supabase
-        .from('products')
+        .from('users_products')
         .delete()
         .eq('id', id);
 
