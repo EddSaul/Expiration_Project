@@ -6,8 +6,6 @@ import './NavBar.css'
 export default function NavBar() { 
   const { session, signOut } = useAuth() // Changed from UserAuth to useAuth
   const navigate = useNavigate()
-
-  console.log("NavBar session check:", session?.user);
   
   const handleSignOut = async () => {
     await signOut();
