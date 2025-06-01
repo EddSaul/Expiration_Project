@@ -16,22 +16,14 @@ import './Dashboard.css';
 import NavBar from '../NavBar/NavBar';
 
 const ProductExpiryTracker = () => {
+
   const { session } = useAuth();
-  const categories = [
-    { name: 'Dairy', code: 'DA' },
-    { name: 'Meat', code: 'ME' },
-    { name: 'Vegetables', code: 'VG' },
-    { name: 'Fruits', code: 'FR' },
-    { name: 'Bakery', code: 'BK' }
-  ];
-
-  const brands = [
-    { name: 'Brand A', code: 'BA' },
-    { name: 'Brand B', code: 'BB' },
-    { name: 'Brand C', code: 'BC' }
-  ];
-
-  const emptyProduct = {
+  const [categories, setCategories] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [filteredBrands, setFilteredBrands] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [newProduct, setNewProduct] = useState({ 
     code: '',
     name: '',
     brand: null,
@@ -39,20 +31,71 @@ const ProductExpiryTracker = () => {
     expiry_date: null,
     quantity: 0,
     taken_out: false
-  };
-
-  const [products, setProducts] = useState([]);
-  const [newProduct, setNewProduct] = useState({ ...emptyProduct });
-  const [loading, setLoading] = useState(false);
+  });
+  const [loading, setLoading] = useState({
+    products: false,
+    categories: false,
+    brands: false
+  });
+  const [search, setSearch] = useState({
+    brand: '',
+    category: ''
+  });
 
   useEffect(() => {
     if (session) {
       fetchProducts();
+      fetchCategories();
+      fetchBrands();
     }
   }, [session]);
 
+  useEffect(() => {
+    filterCategories();
+  }, [search.category, categories]);
+
+  useEffect(() => {
+    filterBrands();
+  }, [search.brand, brands]);
+
+  const fetchCategories = async () => {
+    setLoading(prev => ({ ...prev, categories: true }));
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+      setFilteredCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, categories: false }));
+    }
+  };
+
+  const fetchBrands = async () => {
+    setLoading(prev => ({ ...prev, brands: true }));
+    try {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setBrands(data || []);
+      setFilteredBrands(data || []);
+    } catch (error) {
+      console.error('Error fetching brands:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, brands: false }));
+    }
+  };
+
   const fetchProducts = async () => {
-    setLoading(true);
+    setLoading(prev => ({ ...prev, products: true }));
     try {
       let query = supabase
         .from('users_products')
@@ -77,13 +120,35 @@ const ProductExpiryTracker = () => {
       setProducts(data?.map(p => ({
         ...p,
         expiry_date: p.expiry_date ? new Date(p.expiry_date) : null,
-        brand: brands.find(b => b.name === p.brand) || null,
-        category: categories.find(c => c.name === p.category) || null
+        brand: brands.find(b => b.id === p.brand_id) || null,
+        category: categories.find(c => c.id === p.category_id) || null
       })) || []);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, products: false }));
+    }
+  };
+
+  const filterCategories = () => {
+    if (!search.category) {
+      setFilteredCategories(categories);
+    } else {
+      const filtered = categories.filter(category =>
+        category.name.toLowerCase().includes(search.category.toLowerCase())
+      );
+      setFilteredCategories(filtered);
+    }
+  };
+
+  const filterBrands = () => {
+    if (!search.brand) {
+      setFilteredBrands(brands);
+    } else {
+      const filtered = brands.filter(brand =>
+        brand.name.toLowerCase().includes(search.brand.toLowerCase())
+      );
+      setFilteredBrands(filtered);
     }
   };
 
@@ -95,16 +160,20 @@ const ProductExpiryTracker = () => {
     setNewProduct({ ...newProduct, [e.target.id]: e.target.value });
   };
 
+  const handleSearchChange = (e, field) => {
+    setSearch({ ...search, [field]: e.target.value });
+  };
+
   const addProduct = async () => {
     if (!newProduct.code || !newProduct.name) return;
-    setLoading(true);
+    setLoading(prev => ({ ...prev, products: true }));
     
     try {
       const productToAdd = {
         ...newProduct,
         user_id: session.user.id,
-        brand: newProduct.brand?.name || null,
-        category: newProduct.category?.name || null,
+        brand_id: newProduct.brand?.id || null,
+        category_id: newProduct.category?.id || null,
         expiry_date: newProduct.expiry_date?.toISOString(),
         taken_out: false
       };
@@ -118,13 +187,24 @@ const ProductExpiryTracker = () => {
 
       setProducts([...products, {
         ...data[0],
-        expiry_date: data[0].expiry_date ? new Date(data[0].expiry_date) : null
+        expiry_date: data[0].expiry_date ? new Date(data[0].expiry_date) : null,
+        brand: newProduct.brand,
+        category: newProduct.category
       }]);
-      setNewProduct({ ...emptyProduct });
+      setNewProduct({ 
+        code: '',
+        name: '',
+        brand: null,
+        category: null,
+        expiry_date: null,
+        quantity: 0,
+        taken_out: false
+      });
+      setSearch({ brand: '', category: '' });
     } catch (error) {
       console.error('Error adding product:', error);
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, products: false }));
     }
   };
 
@@ -155,14 +235,14 @@ const ProductExpiryTracker = () => {
         offLabel="Available"
         onIcon="pi pi-check"
         offIcon="pi pi-times"
-        disabled={loading}
+        disabled={loading.products}
       />
     );
   };
 
   const deleteProduct = async (id) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
-    setLoading(true);
+    setLoading(prev => ({ ...prev, products: true }));
     
     try {
       const { error } = await supabase
@@ -176,7 +256,7 @@ const ProductExpiryTracker = () => {
     } catch (error) {
       console.error('Error deleting product:', error);
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, products: false }));
     }
   };
 
@@ -186,8 +266,62 @@ const ProductExpiryTracker = () => {
         icon="pi pi-trash"
         className="p-button-rounded p-button-danger p-button-sm"
         onClick={() => deleteProduct(rowData.id)}
-        disabled={loading}
+        disabled={loading.products}
       />
+    );
+  };
+
+  const brandDropdownTemplate = (option) => {
+    return (
+      <div className="brand-option">
+        <div>{option.name}</div>
+      </div>
+    );
+  };
+
+  const categoryDropdownTemplate = (option) => {
+    return (
+      <div className="category-option">
+        <div>{option.name}</div>
+      </div>
+    );
+  };
+
+  const brandPanelTemplate = (options) => {
+    return (
+      <div className="dropdown-panel">
+        <div className="search-input-container">
+          <InputText
+            value={search.brand}
+            onChange={(e) => handleSearchChange(e, 'brand')}
+            placeholder="Search brands..."
+            className="search-input"
+          />
+          <i className="pi pi-search search-icon" />
+        </div>
+        <div className="dropdown-items">
+          {options}
+        </div>
+      </div>
+    );
+  };
+
+  const categoryPanelTemplate = (options) => {
+    return (
+      <div className="dropdown-panel">
+        <div className="search-input-container">
+          <InputText
+            value={search.category}
+            onChange={(e) => handleSearchChange(e, 'category')}
+            placeholder="Search categories..."
+            className="search-input"
+          />
+          <i className="pi pi-search search-icon" />
+        </div>
+        <div className="dropdown-items">
+          {options}
+        </div>
+      </div>
     );
   };
 
@@ -195,7 +329,6 @@ const ProductExpiryTracker = () => {
     <div className="dashboard-container">
       <h1>Product Expiry Tracker</h1>
       <NavBar />
-      
       <div className="input-row">
         <div className="input-group">
           <div className="p-inputgroup">
@@ -207,7 +340,7 @@ const ProductExpiryTracker = () => {
               value={newProduct.code} 
               onChange={handleTextChange} 
               placeholder="Product Code" 
-              disabled={loading}
+              disabled={loading.products}
             />
           </div>
         </div>
@@ -222,7 +355,7 @@ const ProductExpiryTracker = () => {
               value={newProduct.name} 
               onChange={handleTextChange} 
               placeholder="Product Name" 
-              disabled={loading}
+              disabled={loading.products}
             />
           </div>
         </div>
@@ -231,10 +364,17 @@ const ProductExpiryTracker = () => {
           <Dropdown 
             value={newProduct.brand} 
             onChange={(e) => handleInputChange(e, 'brand')} 
-            options={brands} 
+            options={filteredBrands} 
             optionLabel="name" 
-            placeholder="Select Brand" 
-            disabled={loading}
+            placeholder={loading.brands ? "Loading brands..." : "Select Brand"} 
+            disabled={loading.products || loading.brands}
+            loading={loading.brands}
+            itemTemplate={brandDropdownTemplate}
+            panelTemplate={brandPanelTemplate}
+            filter
+            showFilterClear
+            resetFilterOnHide
+            className="searchable-dropdown"
           />
         </div>
 
@@ -242,10 +382,17 @@ const ProductExpiryTracker = () => {
           <Dropdown 
             value={newProduct.category} 
             onChange={(e) => handleInputChange(e, 'category')} 
-            options={categories} 
+            options={filteredCategories} 
             optionLabel="name" 
-            placeholder="Select Category" 
-            disabled={loading}
+            placeholder={loading.categories ? "Loading categories..." : "Select Category"} 
+            disabled={loading.products || loading.categories}
+            loading={loading.categories}
+            itemTemplate={categoryDropdownTemplate}
+            panelTemplate={categoryPanelTemplate}
+            filter
+            showFilterClear
+            resetFilterOnHide
+            className="searchable-dropdown"
           />
         </div>
 
@@ -256,7 +403,7 @@ const ProductExpiryTracker = () => {
             placeholder="Expiry Date" 
             dateFormat="dd/mm/yy" 
             showIcon 
-            disabled={loading}
+            disabled={loading.products}
           />
         </div>
 
@@ -265,7 +412,7 @@ const ProductExpiryTracker = () => {
             value={newProduct.quantity} 
             onValueChange={(e) => handleInputChange(e, 'quantity')} 
             placeholder="Qty" 
-            disabled={loading}
+            disabled={loading.products}
           />
         </div>
 
@@ -274,9 +421,9 @@ const ProductExpiryTracker = () => {
             label="Add" 
             icon="pi pi-plus" 
             onClick={addProduct} 
-            disabled={!newProduct.code || !newProduct.name || loading} 
+            disabled={!newProduct.code || !newProduct.name || loading.products} 
             className="add-button"
-            loading={loading}
+            loading={loading.products}
           />
         </div>
       </div>
@@ -284,15 +431,25 @@ const ProductExpiryTracker = () => {
       <div className="card">
         <DataTable 
           value={products} 
-          loading={loading}
+          loading={loading.products}
           paginator
           rows={10}
           emptyMessage="No products found"
         >
           <Column field="code" header="Code" sortable />
           <Column field="name" header="Name" sortable />
-          <Column field="brand.name" header="Brand" sortable />
-          <Column field="category.name" header="Category" sortable />
+          <Column 
+            field="brand.name" 
+            header="Brand" 
+            sortable 
+            body={(rowData) => rowData.brand?.name || 'N/A'}
+          />
+          <Column 
+            field="category.name" 
+            header="Category" 
+            sortable 
+            body={(rowData) => rowData.category?.name || 'N/A'}
+          />
           <Column 
             field="expiry_date" 
             header="Expiry Date" 
