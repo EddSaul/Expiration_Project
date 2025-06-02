@@ -120,8 +120,9 @@ const ProductExpiryTracker = () => {
       setProducts(data?.map(p => ({
         ...p,
         expiry_date: p.expiry_date ? new Date(p.expiry_date) : null,
-        brand: brands.find(b => b.id === p.brand_id) || null,
-        category: categories.find(c => c.id === p.category_id) || null
+        // Ensure brand and category are strings (since they're stored as strings in DB)
+        brand: p.brand || '',
+        category: p.category || ''
       })) || []);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -172,8 +173,8 @@ const ProductExpiryTracker = () => {
       const productToAdd = {
         ...newProduct,
         user_id: session.user.id,
-        brand_id: newProduct.brand?.id || null,
-        category_id: newProduct.category?.id || null,
+        brand: newProduct.brand?.name || newProduct.brand || '', 
+        category: newProduct.category?.name || newProduct.category || '', 
         expiry_date: newProduct.expiry_date?.toISOString(),
         taken_out: false
       };
@@ -188,8 +189,8 @@ const ProductExpiryTracker = () => {
       setProducts([...products, {
         ...data[0],
         expiry_date: data[0].expiry_date ? new Date(data[0].expiry_date) : null,
-        brand: newProduct.brand,
-        category: newProduct.category
+        brand: data[0].brand || '', 
+        category: data[0].category || '' 
       }]);
       setNewProduct({ 
         code: '',
@@ -439,16 +440,16 @@ const ProductExpiryTracker = () => {
           <Column field="code" header="Code" sortable />
           <Column field="name" header="Name" sortable />
           <Column 
-            field="brand.name" 
+            field="brand" 
             header="Brand" 
             sortable 
-            body={(rowData) => rowData.brand?.name || 'N/A'}
+            body={(rowData) => rowData.brand || 'N/A'}
           />
           <Column 
-            field="category.name" 
+            field="category" 
             header="Category" 
             sortable 
-            body={(rowData) => rowData.category?.name || 'N/A'}
+            body={(rowData) => rowData.category || 'N/A'}
           />
           <Column 
             field="expiry_date" 
