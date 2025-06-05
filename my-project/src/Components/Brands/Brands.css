@@ -1,5 +1,5 @@
-/* UsersPage.css */
-.users-container {
+/* BrandsPage.css */
+.brands-container {
     display: flex;
     flex-direction: column;
     width: 80%;
@@ -12,28 +12,28 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.users-header {
+.brands-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2.5rem;
 }
 
-.users-header h2 {
+.brands-header h2 {
     font-size: 1.8rem;
     color: #2c3e50;
     margin: 0;
 }
 
-.users-table {
+.brands-table {
     margin-top: 2rem;
 }
 
-.user-form .p-field {
+.brand-form .p-field {
     margin-bottom: 1.75rem;
 }
 
-.user-form .p-field label {
+.brand-form .p-field label {
     display: block;
     margin-bottom: 0.75rem;
     font-weight: 500;
@@ -41,29 +41,16 @@
     color: #495057;
 }
 
-.user-form .p-inputtext,
-.user-form .p-dropdown,
-.user-form .p-password {
+.brand-form .p-inputtext {
     width: 100%;
     padding: 0.75rem;
     font-size: 1rem;
 }
 
-.user-form .p-dropdown {
-    padding: 0.6rem;
+.brand-form .p-checkbox {
+    margin-right: 0.75rem;
+    transform: scale(1.2);
 }
-
-/* Role badges */
-.p-tag {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    border-radius: 6px;
-}
-
-.p-tag-danger { background: #f87171; color: #7f1d1d; }
-.p-tag-warning { background: #fbbf24; color: #78350f; }
-.p-tag-success { background: #4ade80; color: #14532d; }
 
 /* Table spacing */
 .p-datatable .p-datatable-thead > tr > th,
@@ -90,9 +77,39 @@
     padding: 2rem;
 }
 
+.offer-program-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+  
+.offer-program-text {
+    font-size: 0.875rem;
+}
+
+.text-green-500 {
+    color: #22c55e;
+}
+
+.text-red-500 {
+    color: #ef4444;
+}
+
+.brand-dialog .p-dialog-content {
+    padding: 1.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
-    .users-container {
+    .brands-container {
         width: 90%;
         min-width: auto;
         padding: 2rem;
@@ -100,12 +117,12 @@
 }
 
 @media (max-width: 768px) {
-    .users-container {
+    .brands-container {
         width: 95%;
         padding: 1.5rem;
     }
     
-    .users-header {
+    .brands-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 1.5rem;

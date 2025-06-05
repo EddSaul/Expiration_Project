@@ -24,7 +24,7 @@ export const router = createBrowserRouter([
           { path: '/dashboard', element: <Dashboard /> },
           { path: '/createusers', element: <CreateUsers /> },
           { path: '/categories', element: <Categories /> },
-          { path: '/brands', element: <Brands /> }
+          { path: '/brands', element: <Brands /> },
         ]
       }
     ]

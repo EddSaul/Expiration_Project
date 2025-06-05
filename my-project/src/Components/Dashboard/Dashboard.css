@@ -75,6 +75,55 @@ padding-left: 2rem;
 margin-left: 20px;
 }
 
+
+/* Search Bar */
+/* Searchable dropdown styles */
+.searchable-dropdown {
+  width: 100%;
+}
+
+.dropdown-panel {
+  padding: 0.5rem;
+}
+
+.search-input-container {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.5rem 0.5rem 2rem;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  transform: translateY(-50%);
+  color: #6c757d;
+}
+
+.dropdown-items {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.brand-option, .category-option {
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.brand-option:hover, .category-option:hover {
+  background-color: #f8f9fa;
+}
+
+/* Make sure the dropdown panel stays above other elements */
+.p-dropdown-panel {
+  z-index: 1000 !important;
+}
+
 @media (max-width: 768px) {
   .dashboard-container {
       padding: 5rem 1rem 1rem;
@@ -88,4 +137,31 @@ margin-left: 20px;
       padding: 1rem;
       margin: 1rem 0;
   }
+}
+
+
+
+
+
+.scanner-container {
+  position: relative;
+  width: 100%;
+  height: 40vh;
+  margin-bottom: 1rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.scanner-toggle-btn {
+  margin: 1rem auto;
+  z-index: 1000;
+  width: auto;
+}
+
+#scanner-container {
+  width: 100%;
+  height: 100%;
+  flex-grow: 1;
 }
